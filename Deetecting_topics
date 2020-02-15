@@ -1,0 +1,41 @@
+Training model:
+===============
+import gensim
+import logging
+
+desired_list = []
+
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+id2word = gensim.corpora.Dictionary.load_from_text('_wordids.txt')
+mm = gensim.corpora.MmCorpus('_tfidf.mm')
+lda = gensim.models.ldamodel.LdaModel(corpus=mm, id2word=id2word, num_topics=20, update_every=1, passes=1)
+
+lda.save('ldaModel.gensim_lda')
+================================
+
+import pandas as pd
+import gensim
+
+from collections import defaultdict
+
+
+lda = gensim.models.ldamodel.LdaModel.load('ldaModel.gensim_lda')
+
+words_in_topic = defaultdict(list)
+
+for idx, topic in lda.show_topics(num_topics=20, formatted=False, num_words=10):
+    total_prob = 0
+    for (word, prob) in topic:
+        words_in_topic[idx].append(word)
+    print("topic id:", idx)
+    print("top 10 words", words_in_topic[idx])
+
+topicDF = pd.DataFrame(words_in_topic).T
+
+topic_name = ['stem', 'medical', 'flim_industry', 'sports', '', 'middle_east', 'brazil', 'music', 'municipality_1', \
+             'anime', 'biographic', 'song', 'america', 'web', 'china', 'text','election', 'species', 'bronx', 'script']
+
+topicDF['topic_name'] = topic_name
+
+topicDF.to_csv('LDA_topics.csv', sep=',')
+
