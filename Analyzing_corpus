@@ -1,0 +1,74 @@
+import codecs
+import spacy
+from collections import Counter, defaultdict
+from urllib.request import Request, urlopen
+from spacy.lang.en import English
+
+
+FILE_NAME = 'Pride.txt'
+URL = 'https://www.gutenberg.org/files/1342/1342-0.txt'
+
+
+def download_book(t_url):
+    response = urlopen(t_url)
+    book_raw = response.read().decode('utf-8')
+    book_string = str(book_raw)
+    book_lines = book_string.split("\\n")
+    fx = codecs.open(FILE_NAME, "w", encoding='utf-8')
+    for line in book_lines:
+        fx.write(line + "\n")
+    fx.close()
+
+
+def open_book(file_name):
+    with open(file_name, encoding="utf8") as f_open:
+        book_lines = f_open.read()
+    return book_lines
+
+
+def perform_nlp(book_lines):
+    nlp = spacy.load('en_core_web_lg')
+    doc = nlp(book_lines)
+
+    print('1. Tokens in book:', len(doc))
+
+    verbs = [token for token in doc if token.pos_ == 'VERB']
+    print('2. Verbs in book', len(verbs))
+
+    named_entities = []
+    for ent in doc.ents:
+        named_entities.append(ent.text)
+    print('3. Most common entity', Counter(named_entities).most_common()[0])
+
+    sentence_nlp = English()
+    sentencizer = sentence_nlp.create_pipe("sentencizer")
+    sentence_nlp.add_pipe(sentencizer)
+    sent_doc = sentence_nlp(book_lines)
+
+    sent_markers = []
+    for i, sents in enumerate(sent_doc.sents):
+        if len(sents) > 10:
+            sent_markers.append((sents.start, sents.end))
+
+        if i == 14:
+            print('6. vector representation of the first word in the 15th sentence\n', doc[sents.start].vector)
+
+    print('4. Sentences in book:', i)
+
+    sim_score = defaultdict()
+    c_sim_score = 10000  # Random high score
+
+    for (start_1, end_1) in sent_markers:
+        for (start_2, end_2) in sent_markers:
+            sim_score = doc[start_1:end_1].similarity(doc[start_2:end_2])
+            if (sim_score > 0) & (sim_score < c_sim_score):
+                sim_sentence_markers = [(start_1, end_1), (start_2, end_2)]
+
+    print('5. Most similar but not identical sentences are\n')
+    print(doc[sim_sentence_markers[0][0]:sim_sentence_markers[0][1]])
+    print(doc[sim_sentence_markers[0][0]:sim_sentence_markers[0][1]])
+
+if __name__ == '__main__':
+  download_book(URL)
+  book_lines = open_book(FILE_NAME)
+  perform_nlp(book_lines)
